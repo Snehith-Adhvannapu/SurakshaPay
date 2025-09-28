@@ -5,56 +5,91 @@ import SecurityBadge from "@/components/SecurityBadge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Shield, AlertTriangle, TrendingUp, Users } from "lucide-react";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 
 export default function Home() {
-  //todo: remove mock functionality
-  const [balance] = useState(45720.50);
-  const [recentTransactions] = useState([
-    {
-      id: "txn-001",
-      type: "debit" as const,
-      amount: 2500,
-      description: "Payment to Local Grocery Store",
-      timestamp: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString(),
-      securityStatus: "verified" as const,
-      location: "Village Market, Rajasthan"
-    },
-    {
-      id: "txn-002", 
-      type: "credit" as const,
-      amount: 5000,
-      description: "Government Benefit Transfer",
-      timestamp: new Date(Date.now() - 6 * 60 * 60 * 1000).toISOString(),
-      securityStatus: "verified" as const
+  const [balance, setBalance] = useState(0);
+  const [recentTransactions, setRecentTransactions] = useState([]);
+  const [fraudAlerts, setFraudAlerts] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [userProfile, setUserProfile] = useState(null);
+
+  const fetchUserData = async () => {
+    try {
+      const token = localStorage.getItem('authToken');
+      const headers = { 'Authorization': `Bearer ${token}` };
+
+      // Fetch user profile
+      const profileResponse = await fetch('/api/user/profile', { headers });
+      const profile = await profileResponse.json();
+      setUserProfile(profile);
+
+      // Fetch balance
+      const balanceResponse = await fetch('/api/user/balance', { headers });
+      const balanceData = await balanceResponse.json();
+      setBalance(balanceData.balance);
+
+      // Fetch recent transactions
+      const transactionsResponse = await fetch('/api/user/transactions?limit=5', { headers });
+      const transactionsData = await transactionsResponse.json();
+      setRecentTransactions(transactionsData.transactions.map(tx => ({
+        ...tx,
+        securityStatus: tx.fraudScore > 70 ? 'warning' : 'verified'
+      })));
+
+      // Fetch fraud alerts
+      const alertsResponse = await fetch('/api/user/fraud-alerts?active=true', { headers });
+      const alertsData = await alertsResponse.json();
+      setFraudAlerts(alertsData.alerts);
+
+    } catch (error) {
+      console.error('Error fetching user data:', error);
+    } finally {
+      setIsLoading(false);
     }
-  ]);
+  };
 
-  const [fraudAlert] = useState({
-    id: "alert-001",
-    type: "sim_swap" as const,
-    title: "SIM Card Change Detected",
-    description: "We detected your SIM card was changed or replaced. If this was not done by you, please secure your account immediately.",
-    severity: "danger" as const,
-    timestamp: new Date(Date.now() - 30 * 60 * 1000).toISOString(),
-    actionRequired: true
-  });
+  useEffect(() => {
+    fetchUserData();
+  }, []);
 
-  const handleRefreshBalance = () => {
-    console.log('Balance refreshed from home page');
+  const handleRefreshBalance = async () => {
+    console.log('Refreshing balance...');
+    await fetchUserData();
   };
 
   const handleViewTransactionDetails = (id: string) => {
     console.log('View transaction details:', id);
   };
 
-  const handleDismissAlert = (id: string) => {
-    console.log('Alert dismissed:', id);
+  const handleDismissAlert = async (id: string) => {
+    try {
+      const token = localStorage.getItem('authToken');
+      await fetch(`/api/user/fraud-alerts/${id}/dismiss`, {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      setFraudAlerts(prev => prev.filter(alert => alert.id !== id));
+    } catch (error) {
+      console.error('Error dismissing alert:', error);
+    }
   };
 
-  const handleReportFalse = (id: string) => {
-    console.log('Reporting unauthorized activity:', id);
+  const handleReportFalse = async (id: string) => {
+    console.log('Reporting false alert:', id);
+    await handleDismissAlert(id);
   };
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div>
+          <p className="mt-2 text-muted-foreground">Loading your account...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-background pb-20">
@@ -73,7 +108,7 @@ export default function Home() {
         {/* Balance Section */}
         <BalanceCard
           balance={balance}
-          accountNumber="1234567890"
+          accountNumber={userProfile?.accountNumber || ""}
           lastUpdated={new Date().toISOString()}
           securityStatus="verified"
           onRefresh={handleRefreshBalance}
@@ -99,18 +134,31 @@ export default function Home() {
           </CardContent>
         </Card>
 
-        {/* Fraud Alert */}
-        <div className="space-y-2">
-          <h2 className="text-lg font-semibold flex items-center gap-2">
-            <AlertTriangle className="w-5 h-5 text-amber-600" />
-            Security Alerts
-          </h2>
-          <FraudAlertCard
-            alert={fraudAlert}
-            onDismiss={handleDismissAlert}
-            onReportFalse={handleReportFalse}
-          />
-        </div>
+        {/* Fraud Alerts */}
+        {fraudAlerts.length > 0 && (
+          <div className="space-y-2">
+            <h2 className="text-lg font-semibold flex items-center gap-2">
+              <AlertTriangle className="w-5 h-5 text-amber-600" />
+              Security Alerts ({fraudAlerts.length})
+            </h2>
+            {fraudAlerts.slice(0, 2).map((alert) => (
+              <FraudAlertCard
+                key={alert.id}
+                alert={{
+                  id: alert.id,
+                  type: alert.alertType,
+                  title: alert.title,
+                  description: alert.description,
+                  severity: alert.severity,
+                  timestamp: alert.timestamp,
+                  actionRequired: alert.actionRequired
+                }}
+                onDismiss={handleDismissAlert}
+                onReportFalse={handleReportFalse}
+              />
+            ))}
+          </div>
+        )}
 
         {/* Recent Transactions */}
         <div className="space-y-3">

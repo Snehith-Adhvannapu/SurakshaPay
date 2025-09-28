@@ -8,9 +8,34 @@ import ThemeToggle from "@/components/ThemeToggle";
 import Home from "@/pages/Home";
 import Transactions from "@/pages/Transactions";
 import Security from "@/pages/Security";
+import Auth from "@/pages/Auth";
 import NotFound from "@/pages/not-found";
+import { useState, useEffect } from "react";
+import { Button } from "@/components/ui/button";
 
 function Router() {
+  const [isAuthenticated, setIsAuthenticated] = useState<boolean | null>(null);
+
+  useEffect(() => {
+    const token = localStorage.getItem('authToken');
+    setIsAuthenticated(!!token);
+  }, []);
+
+  if (isAuthenticated === null) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div>
+          <p className="mt-2 text-muted-foreground">Loading...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!isAuthenticated) {
+    return <Auth />;
+  }
+
   return (
     <Switch>
       <Route path="/" component={Home} />
@@ -28,9 +53,17 @@ function Router() {
             </div>
           </div>
           <div className="p-4">
-            <div className="text-center py-12">
-              <p className="text-muted-foreground">Settings page coming soon...</p>
-            </div>
+            <Button
+              variant="destructive"
+              onClick={() => {
+                localStorage.removeItem('authToken');
+                localStorage.removeItem('userId');
+                window.location.reload();
+              }}
+              className="w-full"
+            >
+              Sign Out
+            </Button>
           </div>
         </div>
       )} />
