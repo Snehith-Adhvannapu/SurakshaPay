@@ -101,7 +101,8 @@ export class MemStorage implements IStorage {
       firstSeen: new Date(),
       lastSeen: new Date(),
       trustScore: insertFingerprint.trustScore ?? 50,
-      isActive: insertFingerprint.isActive ?? true
+      isActive: insertFingerprint.isActive ?? true,
+      networkInfo: insertFingerprint.networkInfo || null
     };
     this.deviceFingerprints.set(id, fingerprint);
     return fingerprint;
@@ -136,7 +137,9 @@ export class MemStorage implements IStorage {
       id,
       timestamp: new Date(),
       fraudScore: 0,
-      status: "pending"
+      status: "pending",
+      deviceId: insertTransaction.deviceId || null,
+      location: insertTransaction.location || null
     };
     this.transactions.set(id, transaction);
     return transaction;
@@ -177,7 +180,8 @@ export class MemStorage implements IStorage {
       ...insertEvent,
       id,
       timestamp: new Date(),
-      resolved: false
+      resolved: false,
+      deviceId: insertEvent.deviceId || null
     };
     this.securityEvents.set(id, event);
     return event;
@@ -209,7 +213,8 @@ export class MemStorage implements IStorage {
       ...insertAlert,
       id,
       timestamp: new Date(),
-      dismissed: false
+      dismissed: false,
+      actionRequired: insertAlert.actionRequired || null
     };
     this.fraudAlerts.set(id, alert);
     return alert;
@@ -241,7 +246,12 @@ export class MemStorage implements IStorage {
       ...insertDetection,
       id,
       timestamp: new Date(),
-      verified: false
+      verified: false,
+      oldCarrier: insertDetection.oldCarrier || null,
+      newCarrier: insertDetection.newCarrier || null,
+      oldIMSI: insertDetection.oldIMSI || null,
+      newIMSI: insertDetection.newIMSI || null,
+      detectionScore: insertDetection.detectionScore || null
     };
     this.simSwapDetections.set(id, detection);
     return detection;
@@ -259,6 +269,20 @@ export class MemStorage implements IStorage {
       detection.verified = true;
       this.simSwapDetections.set(id, detection);
     }
+  }
+
+  // Agent transaction operations
+  async getAgentTransactions(agentId: string, days: number, offsetDays?: number): Promise<Transaction[]> {
+    const now = new Date();
+    const startTime = new Date(now.getTime() - (days + (offsetDays || 0)) * 24 * 60 * 60 * 1000);
+    const endTime = offsetDays ? new Date(now.getTime() - offsetDays * 24 * 60 * 60 * 1000) : now;
+
+    return Array.from(this.transactions.values())
+      .filter((tx) => {
+        const txDate = new Date(tx.timestamp!);
+        return tx.userId === agentId && txDate >= startTime && txDate <= endTime;
+      })
+      .sort((a, b) => new Date(b.timestamp!).getTime() - new Date(a.timestamp!).getTime());
   }
 }
 
