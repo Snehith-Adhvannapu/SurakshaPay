@@ -1,13 +1,17 @@
 
 import { useState } from "react";
+import { useTranslation } from "react-i18next";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { AlertCircle, Shield, Phone, User, CreditCard } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import LanguageSelector from "@/components/LanguageSelector";
+import ThemeToggle from "@/components/ThemeToggle";
 
 export default function Auth() {
+  const { t } = useTranslation();
   const [isLogin, setIsLogin] = useState(true);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
@@ -91,14 +95,18 @@ export default function Auth() {
 
   return (
     <div className="min-h-screen bg-background flex items-center justify-center p-4">
+      <div className="absolute top-4 right-4 flex gap-2">
+        <LanguageSelector />
+        <ThemeToggle />
+      </div>
       <Card className="w-full max-w-md">
         <CardHeader className="text-center">
           <div className="flex items-center justify-center gap-2 mb-2">
             <Shield className="w-8 h-8 text-primary" />
-            <CardTitle className="text-2xl">RuralBank Security</CardTitle>
+            <CardTitle className="text-2xl">{t('auth.welcome')}</CardTitle>
           </div>
           <p className="text-sm text-muted-foreground">
-            {isLogin ? 'Sign in to your secure account' : 'Create your secure banking account'}
+            {isLogin ? t('auth.subtitle') : t('auth.subtitle')}
           </p>
         </CardHeader>
 
@@ -112,13 +120,13 @@ export default function Auth() {
             )}
 
             <div className="space-y-2">
-              <Label htmlFor="username">Username</Label>
+              <Label htmlFor="username">{t('auth.username')}</Label>
               <div className="relative">
                 <User className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
                 <Input
                   id="username"
                   type="text"
-                  placeholder="Enter your username"
+                  placeholder={t('auth.username')}
                   className="pl-10"
                   value={formData.username}
                   onChange={(e) => handleInputChange('username', e.target.value)}
@@ -128,11 +136,11 @@ export default function Auth() {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="password">Password</Label>
+              <Label htmlFor="password">{t('auth.password')}</Label>
               <Input
                 id="password"
                 type="password"
-                placeholder="Enter your password"
+                placeholder={t('auth.password')}
                 value={formData.password}
                 onChange={(e) => handleInputChange('password', e.target.value)}
                 required
@@ -142,7 +150,7 @@ export default function Auth() {
             {!isLogin && (
               <>
                 <div className="space-y-2">
-                  <Label htmlFor="phoneNumber">Phone Number</Label>
+                  <Label htmlFor="phoneNumber">{t('auth.phoneNumber')}</Label>
                   <div className="relative">
                     <Phone className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
                     <Input
@@ -206,7 +214,7 @@ export default function Auth() {
 
           <div className="mt-4 text-center">
             <Button
-              variant="link"
+              variant="ghost"
               onClick={() => setIsLogin(!isLogin)}
               className="text-sm"
             >
