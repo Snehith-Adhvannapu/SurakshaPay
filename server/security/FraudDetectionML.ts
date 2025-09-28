@@ -207,6 +207,9 @@ export class FraudDetectionML {
       reasons.push("Transaction from new device");
     }
     
+    // Initialize recommended action
+    let recommendedAction: 'approve' | 'review' | 'block' | 'additional_auth' = 'approve';
+    
     // Blacklist checks
     if (this.isBlacklisted(userId, 'user')) {
       fraudScore += 50;
@@ -214,7 +217,7 @@ export class FraudDetectionML {
       recommendedAction = 'block';
     }
     
-    if (this.isBlacklisted(transaction.deviceId, 'device')) {
+    if (this.isBlacklisted(transaction.deviceId || '', 'device')) {
       fraudScore += 45;
       reasons.push("Transaction from blacklisted device");
     }
@@ -269,9 +272,8 @@ export class FraudDetectionML {
     // Cap fraud score at 100
     fraudScore = Math.min(fraudScore, 100);
 
-    // Determine risk level and recommended action
+    // Determine risk level and final recommended action
     let riskLevel: 'low' | 'medium' | 'high' | 'critical';
-    let recommendedAction: 'approve' | 'review' | 'block' | 'additional_auth';
 
     if (fraudScore >= this.CRITICAL_THRESHOLD) {
       riskLevel = 'critical';

@@ -210,7 +210,7 @@ router.post("/api/user/transaction", authenticateToken, async (req: any, res) =>
         userId: req.userId,
         alertType: 'unauthorized',
         title: 'Suspicious Transaction Detected',
-        description: `Transaction of ₹${amount} flagged as suspicious. Reasons: ${fraudResult.reasons.join(', ')}`,
+        description: `Transaction of ₹${amount} flagged as suspicious. Reasons: ${fraudResult.primaryReasons.join(', ')}`,
         severity: 'danger',
         actionRequired: true
       });

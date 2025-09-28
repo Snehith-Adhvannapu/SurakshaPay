@@ -207,7 +207,7 @@ export class OfflineValidator {
   }> {
     // Simplified device validation - in production would check against storage
     // For now, assume valid if deviceId exists and follows pattern
-    const isValidFormat = deviceId && deviceId.length > 10;
+    const isValidFormat = Boolean(deviceId && deviceId.length > 10);
     const trustScore = isValidFormat ? 75 : 25;
 
     return {
@@ -490,7 +490,7 @@ export class OfflineValidator {
     const now = Date.now();
     const maxAge = this.RURAL_POLICY.maxOfflineHours * 60 * 60 * 1000;
 
-    for (const [userId, userQueue] of this.offlineQueue.entries()) {
+    this.offlineQueue.forEach((userQueue, userId) => {
       const validTransactions = userQueue.filter(t => {
         const age = now - t.timestamp.getTime();
         return age <= maxAge;
@@ -505,7 +505,7 @@ export class OfflineValidator {
           this.offlineQueue.set(userId, validTransactions);
         }
       }
-    }
+    });
   }
 
   /**
