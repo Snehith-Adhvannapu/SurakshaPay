@@ -42,6 +42,9 @@ export interface IStorage {
   createSimSwapDetection(detection: InsertSimSwapDetection): Promise<SimSwapDetection>;
   getUserSimSwapEvents(userId: string): Promise<SimSwapDetection[]>;
   verifySimSwapEvent(id: string): Promise<void>;
+  
+  // Agent transaction operations
+  getAgentTransactions(agentId: string, days: number, offsetDays?: number): Promise<Transaction[]>;
 }
 
 export class MemStorage implements IStorage {

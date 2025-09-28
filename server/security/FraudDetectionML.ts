@@ -1,5 +1,6 @@
 import { storage } from "../storage";
-import { Transaction, DeviceFingerprint } from "@shared/schema";
+import { Transaction, DeviceFingerprint, InsertFraudAlert } from "@shared/schema";
+import { AgentBehaviorAnalyzer } from "./AgentBehaviorAnalyzer";
 
 export interface TransactionFeatures {
   // Amount features
@@ -50,6 +51,7 @@ export class FraudDetectionML {
   private readonly HIGH_THRESHOLD = 65;
   private readonly MEDIUM_THRESHOLD = 35;
   private readonly MAX_FAILED_ATTEMPTS = 5;
+  private readonly agentAnalyzer: AgentBehaviorAnalyzer;
   
   // Track failed login attempts per user
   private failedLoginAttempts: Map<string, { count: number; lastAttempt: Date }> = new Map();
@@ -62,6 +64,10 @@ export class FraudDetectionML {
   
   private blacklistedDevices: Set<string> = new Set();
   private blacklistedUsers: Set<string> = new Set();
+
+  constructor() {
+    this.agentAnalyzer = new AgentBehaviorAnalyzer();
+  }
 
   // Rural banking specific weights (optimized for rural fraud patterns)
   private readonly WEIGHTS = {
@@ -532,6 +538,28 @@ export class FraudDetectionML {
       fraudRate,
       avgFraudScore,
       riskProfile
+    };
+  }
+
+  /**
+   * Analyze agent behavior for anomalies (for banking agents)
+   */
+  async analyzeAgentBehavior(agentId: string): Promise<{
+    anomalyScore: number;
+    riskFactors: string[];
+    recommendedAction: string;
+    performanceMetrics: any;
+  }> {
+    const recentTransactions = await storage.getAgentTransactions(agentId, 1); // Last 24 hours
+    
+    const behaviorAnalysis = await this.agentAnalyzer.analyzeAgentBehavior(agentId, recentTransactions);
+    const performanceMetrics = await this.agentAnalyzer.getAgentPerformanceMetrics(agentId);
+
+    return {
+      anomalyScore: behaviorAnalysis.overallScore,
+      riskFactors: behaviorAnalysis.riskFactors,
+      recommendedAction: behaviorAnalysis.recommendedAction,
+      performanceMetrics
     };
   }
 }
