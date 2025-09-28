@@ -10,6 +10,20 @@ export const users = pgTable("users", {
   passwordSalt: text("password_salt").notNull(),
   phoneNumber: text("phone_number").notNull(),
   accountNumber: text("account_number").notNull().unique(),
+  // Rural banking context - essential for rural users
+  village: text("village"), // Village name for rural context
+  district: text("district"), // District for location-based fraud detection
+  state: text("state"), // State for regulatory compliance
+  isAgent: boolean("is_agent").default(false), // Banking agent flag
+  agentCode: text("agent_code"), // Agent identification code
+  preferredLanguage: text("preferred_language").default("en"), // Multi-language support
+  // Mobile optimization fields
+  deviceType: text("device_type"), // smartphone, feature_phone, tablet
+  networkType: text("network_type").default("4g"), // 2g, 3g, 4g, wifi
+  trustScore: integer("trust_score").default(100), // 0-100 user trust score
+  accountBalance: decimal("account_balance", { precision: 10, scale: 2 }).default("0.00"),
+  lastActiveAt: timestamp("last_active_at").defaultNow(),
+  isBlocked: boolean("is_blocked").default(false),
   createdAt: timestamp("created_at").defaultNow(),
 });
 
@@ -28,14 +42,24 @@ export const deviceFingerprints = pgTable("device_fingerprints", {
 export const transactions = pgTable("transactions", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   userId: varchar("user_id").notNull().references(() => users.id),
-  amount: decimal("amount", { precision: 12, scale: 2 }).notNull(),
-  type: text("type").notNull(), // debit, credit
-  description: text("description").notNull(),
+  amount: decimal("amount", { precision: 10, scale: 2 }).notNull(), // Reduced precision for mobile
+  type: text("type").notNull(), // deposit, withdrawal, transfer, payment
+  description: text("description"),
   location: text("location"),
   deviceId: text("device_id"),
+  // Rural banking enhancements
+  agentId: varchar("agent_id").references(() => users.id), // Agent who assisted
+  networkType: text("network_type").default("4g"), // Network used for transaction
+  isOfflineTransaction: boolean("is_offline").default(false), // Offline transaction flag
+  batteryLevel: integer("battery_level"), // Device battery during transaction
+  riskLevel: text("risk_level").default("low"), // low, medium, high, critical
+  mlModel: text("ml_model"), // Which ML model detected risk (svm, lof, hmm, rnn)
+  mlConfidence: decimal("ml_confidence", { precision: 5, scale: 2 }), // ML confidence %
+  fraudFlags: text("fraud_flags"), // JSON array of fraud indicators
+  // Original fields
   timestamp: timestamp("timestamp").defaultNow(),
   fraudScore: integer("fraud_score").default(0), // 0-100
-  status: text("status").default("pending"), // pending, verified, flagged
+  status: text("status").default("pending"), // pending, verified, flagged, blocked
 });
 
 export const securityEvents = pgTable("security_events", {
@@ -52,12 +76,24 @@ export const securityEvents = pgTable("security_events", {
 export const fraudAlerts = pgTable("fraud_alerts", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   userId: varchar("user_id").notNull().references(() => users.id),
-  alertType: text("alert_type").notNull(), // sim_swap, fake_app, phishing, unauthorized
+  transactionId: varchar("transaction_id").references(() => transactions.id),
+  alertType: text("alert_type").notNull(), // unusual_amount, new_device, location_change, sim_swap, phishing
   title: text("title").notNull(),
   description: text("description").notNull(),
-  severity: text("severity").notNull(), // warning, danger
+  severity: text("severity").notNull(), // low, medium, high, critical
+  // Enhanced rural banking fields
+  mlModel: text("ml_model"), // Which ML model triggered alert
+  mlConfidence: decimal("ml_confidence", { precision: 5, scale: 2 }), // Confidence percentage
+  riskFactors: text("risk_factors"), // JSON array of risk factors
+  location: text("location"), // Where alert was triggered
+  deviceInfo: text("device_info"), // Compressed device information
+  networkType: text("network_type"), // Network when alert triggered
+  agentId: varchar("agent_id").references(() => users.id), // Agent who can resolve
+  // Actions and resolution
   actionRequired: boolean("action_required").default(false),
+  actionTaken: text("action_taken"), // blocked, flagged, approved, sms_sent
   dismissed: boolean("dismissed").default(false),
+  resolvedAt: timestamp("resolved_at"),
   timestamp: timestamp("timestamp").defaultNow(),
 });
 
@@ -76,7 +112,6 @@ export const simSwapDetection = pgTable("sim_swap_detection", {
 // Insert schemas
 export const insertUserSchema = createInsertSchema(users).pick({
   username: true,
-  password: true,
   phoneNumber: true,
   accountNumber: true,
 });

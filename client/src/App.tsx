@@ -9,6 +9,18 @@ import LanguageSelector from "@/components/LanguageSelector";
 import Home from "@/pages/Home";
 import Transactions from "@/pages/Transactions";
 import Security from "@/pages/Security";
+import LiveDashboard from "@/pages/LiveDashboard";
+import ComplianceDashboard from "@/pages/ComplianceDashboard";
+import AgentManagement from "@/pages/AgentManagement";
+import RiskAssessment from "@/pages/RiskAssessment";
+import CostSavings from "@/pages/CostSavings";
+import TazamaIntegration from "@/pages/TazamaIntegration";
+import LightweightML from "@/pages/LightweightML";
+import DeviceFingerprinting from "@/pages/DeviceFingerprinting";
+import SuccessMetrics from "@/pages/SuccessMetrics";
+import OfflineCapabilities from "@/pages/OfflineCapabilities";
+import LibsodiumEncryption from "@/pages/LibsodiumEncryption";
+import SMSFallback from "@/pages/SMSFallback";
 import Auth from "@/pages/Auth";
 import NotFound from "@/pages/not-found";
 import { useState, useEffect } from "react";
@@ -43,6 +55,18 @@ function Router() {
       <Route path="/" component={Home} />
       <Route path="/transactions" component={Transactions} />
       <Route path="/security" component={Security} />
+      <Route path="/live-dashboard" component={LiveDashboard} />
+      <Route path="/compliance" component={ComplianceDashboard} />
+      <Route path="/agents" component={AgentManagement} />
+      <Route path="/risk-assessment" component={RiskAssessment} />
+      <Route path="/cost-savings" component={CostSavings} />
+      <Route path="/tazama" component={TazamaIntegration} />
+      <Route path="/ml-models" component={LightweightML} />
+      <Route path="/device-fingerprinting" component={DeviceFingerprinting} />
+      <Route path="/success-metrics" component={SuccessMetrics} />
+      <Route path="/offline-capabilities" component={OfflineCapabilities} />
+      <Route path="/libsodium-encryption" component={LibsodiumEncryption} />
+      <Route path="/sms-fallback" component={SMSFallback} />
       <Route path="/settings" component={() => {
         const { t } = useTranslation();
         return (

@@ -2,6 +2,9 @@ import { Router } from "express";
 import { storage } from "./storage";
 import { FraudDetectionML } from "./security/FraudDetectionML";
 import { AgentBehaviorAnalyzer } from "./security/AgentBehaviorAnalyzer";
+import { performanceTracker } from "./security/PerformanceTracker";
+import { liveFraudSimulator } from "./security/LiveFraudSimulator";
+import { mlModels } from "./security/MLModels";
 
 // Create instances
 const fraudDetectionML = new FraudDetectionML();
@@ -251,6 +254,85 @@ router.post("/api/user/fraud-alerts/:alertId/dismiss", authenticateToken, async 
     res.json({ success: true });
   } catch (error) {
     res.status(500).json({ error: "Failed to dismiss alert" });
+  }
+});
+
+// Performance and ML metrics endpoints
+router.get("/api/metrics/performance", authenticateToken, async (req: any, res) => {
+  try {
+    const metrics = performanceTracker.generatePerformanceReport();
+    res.json(metrics);
+  } catch (error) {
+    res.status(500).json({ error: "Failed to fetch performance metrics" });
+  }
+});
+
+router.get("/api/metrics/ml", authenticateToken, async (req: any, res) => {
+  try {
+    const metrics = {
+      ensemble: mlModels.ensemble.getModelPerformance(),
+      benchmarks: performanceTracker.getBenchmarkComparison()
+    };
+    res.json(metrics);
+  } catch (error) {
+    res.status(500).json({ error: "Failed to fetch ML metrics" });
+  }
+});
+
+router.get("/api/metrics/compliance", authenticateToken, async (req: any, res) => {
+  try {
+    const compliance = performanceTracker.getRBIComplianceStatus();
+    res.json(compliance);
+  } catch (error) {
+    res.status(500).json({ error: "Failed to fetch compliance metrics" });
+  }
+});
+
+// Live fraud simulation endpoints
+router.get("/api/fraud/live-events", authenticateToken, async (req: any, res) => {
+  try {
+    const events = liveFraudSimulator.getEventHistory();
+    const stats = liveFraudSimulator.getStatistics();
+    
+    res.json({
+      events: events.slice(-20), // Last 20 events
+      statistics: stats
+    });
+  } catch (error) {
+    res.status(500).json({ error: "Failed to fetch live fraud events" });
+  }
+});
+
+router.post("/api/fraud/trigger-scenario", authenticateToken, async (req: any, res) => {
+  try {
+    const { scenarioName } = req.body;
+    const event = liveFraudSimulator.triggerScenario(scenarioName);
+    
+    res.json({ 
+      success: true, 
+      event,
+      message: `Triggered scenario: ${scenarioName}` 
+    });
+  } catch (error) {
+    res.status(500).json({ error: "Failed to trigger fraud scenario" });
+  }
+});
+
+router.post("/api/fraud/start-demo", authenticateToken, async (req: any, res) => {
+  try {
+    liveFraudSimulator.startLiveDemo();
+    res.json({ success: true, message: "Live fraud demo started" });
+  } catch (error) {
+    res.status(500).json({ error: "Failed to start fraud demo" });
+  }
+});
+
+router.post("/api/fraud/stop-demo", authenticateToken, async (req: any, res) => {
+  try {
+    liveFraudSimulator.stopLiveDemo();
+    res.json({ success: true, message: "Live fraud demo stopped" });
+  } catch (error) {
+    res.status(500).json({ error: "Failed to stop fraud demo" });
   }
 });
 
