@@ -5,6 +5,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import BottomNavigation from "@/components/BottomNavigation";
 import ThemeToggle from "@/components/ThemeToggle";
+import LanguageSelector from "@/components/LanguageSelector";
 import Home from "@/pages/Home";
 import Transactions from "@/pages/Transactions";
 import Security from "@/pages/Security";
@@ -12,6 +13,7 @@ import Auth from "@/pages/Auth";
 import NotFound from "@/pages/not-found";
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
+import { useTranslation } from "react-i18next";
 
 function Router() {
   const [isAuthenticated, setIsAuthenticated] = useState<boolean | null>(null);
@@ -41,32 +43,43 @@ function Router() {
       <Route path="/" component={Home} />
       <Route path="/transactions" component={Transactions} />
       <Route path="/security" component={Security} />
-      <Route path="/settings" component={() => (
-        <div className="min-h-screen bg-background pb-20">
-          <div className="bg-primary text-primary-foreground p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <h1 className="text-xl font-semibold">Settings</h1>
-                <p className="text-sm opacity-90">App preferences and configuration</p>
+      <Route path="/settings" component={() => {
+        const { t } = useTranslation();
+        return (
+          <div className="min-h-screen bg-background pb-20">
+            <div className="bg-primary text-primary-foreground p-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h1 className="text-xl font-semibold">{t('common.settings')}</h1>
+                  <p className="text-sm opacity-90">App preferences and configuration</p>
+                </div>
+                <div className="flex gap-2">
+                  <LanguageSelector />
+                  <ThemeToggle />
+                </div>
               </div>
-              <ThemeToggle />
+            </div>
+            <div className="p-4 space-y-4">
+              <div className="p-4 bg-muted rounded-lg">
+                <h3 className="font-medium mb-2">{t('common.language')}</h3>
+                <p className="text-sm text-muted-foreground mb-3">Choose your preferred language for the interface</p>
+                <LanguageSelector />
+              </div>
+              <Button
+                variant="destructive"
+                onClick={() => {
+                  localStorage.removeItem('authToken');
+                  localStorage.removeItem('userId');
+                  window.location.reload();
+                }}
+                className="w-full"
+              >
+                {t('nav.logout')}
+              </Button>
             </div>
           </div>
-          <div className="p-4">
-            <Button
-              variant="destructive"
-              onClick={() => {
-                localStorage.removeItem('authToken');
-                localStorage.removeItem('userId');
-                window.location.reload();
-              }}
-              className="w-full"
-            >
-              Sign Out
-            </Button>
-          </div>
-        </div>
-      )} />
+        );
+      }} />
       <Route component={NotFound} />
     </Switch>
   );

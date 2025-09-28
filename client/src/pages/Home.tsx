@@ -2,17 +2,20 @@ import BalanceCard from "@/components/BalanceCard";
 import TransactionCard from "@/components/TransactionCard";
 import FraudAlertCard from "@/components/FraudAlertCard";
 import SecurityBadge from "@/components/SecurityBadge";
+import LanguageSelector from "@/components/LanguageSelector";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Shield, AlertTriangle, TrendingUp, Users } from "lucide-react";
 import { useState, useEffect } from "react";
+import { useTranslation } from "react-i18next";
 
 export default function Home() {
+  const { t } = useTranslation();
   const [balance, setBalance] = useState(0);
-  const [recentTransactions, setRecentTransactions] = useState([]);
-  const [fraudAlerts, setFraudAlerts] = useState([]);
+  const [recentTransactions, setRecentTransactions] = useState<any[]>([]);
+  const [fraudAlerts, setFraudAlerts] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [userProfile, setUserProfile] = useState(null);
+  const [userProfile, setUserProfile] = useState<any>(null);
 
   const fetchUserData = async () => {
     try {
@@ -32,7 +35,7 @@ export default function Home() {
       // Fetch recent transactions
       const transactionsResponse = await fetch('/api/user/transactions?limit=5', { headers });
       const transactionsData = await transactionsResponse.json();
-      setRecentTransactions(transactionsData.transactions.map(tx => ({
+      setRecentTransactions(transactionsData.transactions.map((tx: any) => ({
         ...tx,
         securityStatus: tx.fraudScore > 70 ? 'warning' : 'verified'
       })));
@@ -97,10 +100,13 @@ export default function Home() {
       <div className="bg-primary text-primary-foreground p-4">
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-xl font-semibold">RuralBank Security</h1>
-            <p className="text-sm opacity-90">Secure Banking for Rural India</p>
+            <h1 className="text-xl font-semibold">{t('auth.welcome')}</h1>
+            <p className="text-sm opacity-90">{t('auth.subtitle')}</p>
           </div>
-          <SecurityBadge status="verified" label="System Secure" />
+          <div className="flex items-center gap-2">
+            <LanguageSelector />
+            <SecurityBadge status="verified" label="System Secure" />
+          </div>
         </div>
       </div>
 
