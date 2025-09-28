@@ -1,7 +1,11 @@
 import { Router } from "express";
 import { storage } from "./storage";
-import { fraudDetectionML } from "./security/FraudDetectionML";
-import { agentBehaviorAnalyzer } from "./security/AgentBehaviorAnalyzer";
+import { FraudDetectionML } from "./security/FraudDetectionML";
+import { AgentBehaviorAnalyzer } from "./security/AgentBehaviorAnalyzer";
+
+// Create instances
+const fraudDetectionML = new FraudDetectionML();
+const agentBehaviorAnalyzer = new AgentBehaviorAnalyzer();
 import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
 import type { InsertUser, InsertTransaction } from "@shared/schema";
@@ -195,7 +199,7 @@ router.post("/api/user/transaction", authenticateToken, async (req: any, res) =>
     const transaction = await storage.createTransaction(newTransaction);
 
     // Run fraud detection
-    const fraudResult = await fraudDetectionML.predictFraud(req.userId, transaction);
+    const fraudResult = await fraudDetectionML.predictFraud(transaction, req.userId);
 
     // Update transaction with fraud score
     await storage.updateTransactionFraudScore(transaction.id, fraudResult.fraudScore);
