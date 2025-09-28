@@ -49,6 +49,19 @@ export class FraudDetectionML {
   private readonly CRITICAL_THRESHOLD = 85;
   private readonly HIGH_THRESHOLD = 65;
   private readonly MEDIUM_THRESHOLD = 35;
+  private readonly MAX_FAILED_ATTEMPTS = 5;
+  
+  // Track failed login attempts per user
+  private failedLoginAttempts: Map<string, { count: number; lastAttempt: Date }> = new Map();
+  
+  // Blacklisted phone numbers, device IDs, and user IDs
+  private blacklistedNumbers: Set<string> = new Set([
+    '+91-XXXX-FRAUD', // Example entries
+    '+91-YYYY-SCAM'
+  ]);
+  
+  private blacklistedDevices: Set<string> = new Set();
+  private blacklistedUsers: Set<string> = new Set();
 
   // Rural banking specific weights (optimized for rural fraud patterns)
   private readonly WEIGHTS = {
@@ -186,6 +199,25 @@ export class FraudDetectionML {
     if (features.newDevice) {
       fraudScore += 15;
       reasons.push("Transaction from new device");
+    }
+    
+    // Blacklist checks
+    if (this.isBlacklisted(userId, 'user')) {
+      fraudScore += 50;
+      reasons.push("Transaction from blacklisted user");
+      recommendedAction = 'block';
+    }
+    
+    if (this.isBlacklisted(transaction.deviceId, 'device')) {
+      fraudScore += 45;
+      reasons.push("Transaction from blacklisted device");
+    }
+    
+    // Failed login attempt check
+    if (this.isUserBlocked(userId)) {
+      fraudScore += 30;
+      reasons.push("User account temporarily locked due to failed login attempts");
+      recommendedAction = 'block';
     }
 
     // Location-based scoring
@@ -342,6 +374,105 @@ export class FraudDetectionML {
     }
     
     return 'unknown';
+  }
+
+  /**
+   * Track and analyze failed login attempts
+   */
+  async trackFailedLogin(userId: string): Promise<{
+    shouldBlock: boolean;
+    attemptsCount: number;
+    timeToUnlock?: number;
+  }> {
+    const now = new Date();
+    const userAttempts = this.failedLoginAttempts.get(userId) || { count: 0, lastAttempt: now };
+    
+    // Reset attempts if last attempt was over 1 hour ago
+    const hoursSinceLastAttempt = (now.getTime() - userAttempts.lastAttempt.getTime()) / (1000 * 60 * 60);
+    if (hoursSinceLastAttempt > 1) {
+      userAttempts.count = 0;
+    }
+    
+    userAttempts.count += 1;
+    userAttempts.lastAttempt = now;
+    this.failedLoginAttempts.set(userId, userAttempts);
+    
+    const shouldBlock = userAttempts.count >= this.MAX_FAILED_ATTEMPTS;
+    
+    if (shouldBlock) {
+      // Create fraud alert for account lockout
+      const fraudAlert: InsertFraudAlert = {
+        userId,
+        alertType: "unauthorized",
+        title: "Account Temporarily Locked",
+        description: `Your account has been temporarily locked due to ${userAttempts.count} failed login attempts. Please wait 30 minutes before trying again.`,
+        severity: "danger",
+        actionRequired: true
+      };
+      
+      await storage.createFraudAlert(fraudAlert);
+    }
+    
+    return {
+      shouldBlock,
+      attemptsCount: userAttempts.count,
+      timeToUnlock: shouldBlock ? 30 * 60 * 1000 : undefined // 30 minutes in milliseconds
+    };
+  }
+  
+  /**
+   * Reset failed login attempts after successful login
+   */
+  resetFailedLoginAttempts(userId: string): void {
+    this.failedLoginAttempts.delete(userId);
+  }
+  
+  /**
+   * Check if user is currently blocked due to failed attempts
+   */
+  isUserBlocked(userId: string): boolean {
+    const userAttempts = this.failedLoginAttempts.get(userId);
+    if (!userAttempts) return false;
+    
+    const shouldBlock = userAttempts.count >= this.MAX_FAILED_ATTEMPTS;
+    const timeSinceLastAttempt = Date.now() - userAttempts.lastAttempt.getTime();
+    const lockoutPeriod = 30 * 60 * 1000; // 30 minutes
+    
+    return shouldBlock && timeSinceLastAttempt < lockoutPeriod;
+  }
+  
+  /**
+   * Check if phone number, device, or user is blacklisted
+   */
+  isBlacklisted(identifier: string, type: 'phone' | 'device' | 'user'): boolean {
+    switch (type) {
+      case 'phone':
+        return this.blacklistedNumbers.has(identifier);
+      case 'device':
+        return this.blacklistedDevices.has(identifier);
+      case 'user':
+        return this.blacklistedUsers.has(identifier);
+      default:
+        return false;
+    }
+  }
+  
+  /**
+   * Add to blacklist
+   */
+  addToBlacklist(identifier: string, type: 'phone' | 'device' | 'user', reason?: string): void {
+    switch (type) {
+      case 'phone':
+        this.blacklistedNumbers.add(identifier);
+        break;
+      case 'device':
+        this.blacklistedDevices.add(identifier);
+        break;
+      case 'user':
+        this.blacklistedUsers.add(identifier);
+        break;
+    }
+    console.log(`Added ${identifier} to ${type} blacklist. Reason: ${reason || 'Not specified'}`);
   }
 
   /**
